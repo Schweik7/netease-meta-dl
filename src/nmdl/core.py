@@ -63,17 +63,18 @@ class Stats:
     records: dict = field(default_factory=dict)
 
 
-def collect(opts: Options) -> list[str]:
+def collect(opts, exts=AUDIO_EXT) -> list[str]:
+    """按 opts 的 directory/recursive/only 扫出文件；exts 可换成别的后缀集合。"""
     root = os.path.abspath(opts.directory)
     files: list[str] = []
     if opts.recursive:
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if not d.startswith(".")]
             files += [os.path.join(dirpath, f) for f in filenames
-                      if os.path.splitext(f)[1].lower() in AUDIO_EXT]
+                      if os.path.splitext(f)[1].lower() in exts]
     else:
         files = [os.path.join(root, f) for f in os.listdir(root)
-                 if os.path.splitext(f)[1].lower() in AUDIO_EXT
+                 if os.path.splitext(f)[1].lower() in exts
                  and os.path.isfile(os.path.join(root, f))]
     if opts.only:
         needle = opts.only.lower()
@@ -252,6 +253,8 @@ def run(opts: Options, log=print) -> Stats:
     if opts.limit:
         files = files[:opts.limit]
 
+    stats = Stats(total=len(files))
+
     if opts.proxy:
         set_proxy(opts.proxy)
 
@@ -283,7 +286,6 @@ def run(opts: Options, log=print) -> Stats:
     limiter = RateLimiter(rps=opts.rps, cooldown=opts.cooldown,
                           on_wait=on_wait, on_throttle=on_throttle if rotator else None)
 
-    stats = Stats(total=len(files))
     lock = threading.Lock()
     log("目录: %s" % root)
     log("待处理: %d 首   并发: %d   限速: %.2f 请求/秒%s%s" % (

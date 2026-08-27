@@ -1,7 +1,10 @@
 # nmdl — 网易云歌词/封面批量下载
 
-扫描目录里的音乐文件，按「歌手 - 歌名」去网易云匹配，把**歌词**存成同名 `.lrc`、
-**封面**存成同名 `.jpg`。同一套参数有命令行和图形界面两个入口。
+两个独立的功能，命令行和图形界面两个入口：
+
+- **`nmdl download`** —— 扫描目录里的音乐文件，按「歌手 - 歌名」去网易云匹配，把**歌词**
+  存成同名 `.lrc`、**封面**存成同名 `.jpg`；
+- **`nmdl convert`** —— 把 **FLAC 转成 MP3**，喂给不认 FLAC 的播放设备。
 
 匹配逻辑参考 [zhongyang219/MusicPlayer2](https://github.com/zhongyang219/MusicPlayer2)
 的歌词下载模块（`NeteaseLyricDownload.cpp` / `LyricDownloadCommon.cpp`），接口地址一致，
@@ -11,17 +14,22 @@
 ## 用法
 
 ```bash
-# 图形界面（推荐）
+# 图形界面（推荐）：左侧边栏选功能
 uv run nmdl-gui
 
 # 命令行
-uv run nmdl --dir "D:\Music\Music"      # 处理该目录，已有 .lrc/.jpg 的跳过
-uv run nmdl --limit 10 --dry-run        # 先拿 10 首试，只看匹配结果不写文件
-uv run nmdl --retry-failed              # 只重试上次没成功的
-uv run nmdl --only "Adele"              # 只处理文件名含 Adele 的
-uv run nmdl --force                     # 已有的也重下
-uv run nmdl --help                      # 全部参数
+uv run nmdl download --dir "D:\Music\Music"   # 处理该目录，已有 .lrc/.jpg 的跳过
+uv run nmdl download --limit 10 --dry-run     # 先拿 10 首试，只看匹配结果不写文件
+uv run nmdl download --retry-failed           # 只重试上次没成功的
+uv run nmdl download --only "Adele"           # 只处理文件名含 Adele 的
+uv run nmdl download --force                  # 已有的也重下
+
+uv run nmdl convert --dir "D:\Music\Music"    # 把该目录的 FLAC 转成 MP3
+
+uv run nmdl --help                            # 全部参数
 ```
+
+子命令可以省略，`nmdl --dir ...` 等同于 `nmdl download --dir ...`。
 
 首次使用：
 
@@ -39,6 +47,39 @@ uv sync --extra gui     # 带 GUI；只要命令行的话 uv sync 就够
 | `nmdl_report.txt` | 没匹配上或有问题的条目清单，方便人工核对 |
 
 默认**不改动音频文件本身**。想把封面和标签写进文件里再加 `--embed-cover` / `--write-tags`。
+
+## FLAC 转 MP3 —— `nmdl convert`
+
+设备不认 FLAC 的话用这个。它跟歌词封面下载**完全独立**，只管转格式、不碰网络。
+
+```bash
+uv run nmdl convert --dir "D:\Music"                       # 原地转成 320k MP3
+uv run nmdl convert -r --bitrate V0 --output "D:\ToPhone"   # 递归 + VBR V0，另存到别的目录
+uv run nmdl convert --dry-run                              # 只列出要转哪些，不动文件
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `--dir` `-r` `--only` `--limit` | 扫哪些文件，跟 `download` 一个意思 |
+| `--bitrate` | `320k`(默认) `256k` `192k` `128k` / `V0` `V2`（VBR，V0 体积小一半、听感接近 320k） |
+| `--output` | 输出目录，留空则和源文件放一起；配 `-r` 时会复刻子目录结构 |
+| `--workers` | 并发数，0（默认）按 CPU 核数自动决定 |
+| `--delete-source` | ⚠ 转换成功后删掉源 FLAC，不可撤销 |
+| `--ffmpeg` | ffmpeg 路径，留空从 PATH 找 |
+| `--force` | 目标 mp3 已存在也重新转 |
+
+原有的**标签和内嵌封面会一起转过去**（写成 ID3v2.3，兼容性最好）；个别 FLAC 的内嵌图片
+塞不进 ID3 时会自动丢掉图片重转一次——这种情况事后跑一次 `nmdl download` 补封面就行。
+目标 mp3 已存在就跳过，`--force` 才重转。转换先写 `.part` 临时文件再改名，中途中断不会
+留下半成品。
+
+想给转出来的 MP3 配歌词封面，转完再跑一次 `nmdl download` 即可。
+
+需要 **ffmpeg**：
+
+```bash
+winget install Gyan.FFmpeg     # Windows；装完重开终端
+```
 
 ## 关于限流
 
@@ -61,7 +102,7 @@ uv sync --extra gui     # 带 GUI；只要命令行的话 uv sync 就够
 不想等冷却的话，可以让它撞限流时通过 Clash 换节点：
 
 ```bash
-uv run nmdl --rotate-ip --proxy http://127.0.0.1:7890
+uv run nmdl download --rotate-ip --proxy http://127.0.0.1:7890
 ```
 
 会自动探测本机 Clash 里负责 `music.163.com` 流量的策略组（通常叫 `NetEaseMusic`），
@@ -74,7 +115,7 @@ uv run nmdl --rotate-ip --proxy http://127.0.0.1:7890
 
 看 `nmdl_report.txt`。常见原因和处理：
 
-- 文件名不是「歌手 - 歌名」格式 → 改好文件名后 `--retry-failed`；
+- 文件名不是「歌手 - 歌名」格式 → 改好文件名后 `download --retry-failed`；
 - 网易云上确实没有这首（小众曲、自制曲）；
 - 纯音乐 → 报告里标 `纯音乐/无歌词`，属正常，重跑不会再去请求；
 - 匹配到了但明显不对 → 调高 `--min-score`（默认 45，满分约 138）。
@@ -88,9 +129,11 @@ src/nmdl/
   matcher.py   文件名解析 + 匹配打分（MusicPlayer2 的权重）
   lrc.py       LRC 解析与原文+翻译合并
   tagging.py   读时长；可选地写封面/标签进音频
-  core.py      批量调度、缓存、报告
+  convert.py   convert 子命令：FLAC -> MP3（调 ffmpeg，保留标签和内嵌封面）
+  core.py      download 子命令：批量调度、缓存、报告
   cli.py       参数定义（CLI 与 GUI 共用同一个 parser）
   gui.py       Gooey 界面，直接渲染 cli.py 的 parser
 ```
 
-CLI 和 GUI 共用 `cli.build_parser()`，加参数两边同时就有了。
+CLI 和 GUI 共用 `cli.build_parser()`，加参数两边同时就有了；两个子命令在 GUI 里就是
+左侧边栏的两页。
