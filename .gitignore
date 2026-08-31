@@ -14,6 +14,9 @@ android/.gradle/
 # local.properties 里是本机的 SDK 路径
 android/local.properties
 android/app/build/
+# 签名密钥和密码不进仓库；密钥丢了就没法给已装的 app 做升级，记得单独备份
+android/*.jks
+android/keystore.properties
 *.apk
 *.aab
 *.iml

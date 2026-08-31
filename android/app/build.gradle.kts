@@ -1,6 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+}
+
+// 发版签名。keystore.properties 和 .jks 都不在仓库里（见 .gitignore）——
+// 别人 clone 下来没有这两个文件，release 就退回 debug 签名，照样能构建出能装的包。
+val keystoreFile = rootProject.file("keystore.properties")
+val hasSigning = keystoreFile.exists()
+val keystoreProps = Properties().apply {
+    if (hasSigning) keystoreFile.inputStream().use { load(it) }
 }
 
 android {
@@ -16,9 +26,22 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasSigning) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName(if (hasSigning) "release" else "debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"),
                           "proguard-rules.pro")
         }

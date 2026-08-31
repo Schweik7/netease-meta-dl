@@ -1,10 +1,16 @@
 # nmdl — 网易云歌词/封面批量下载
 
-两个独立的功能，命令行和图形界面两个入口：
+电脑上是两个独立的功能，命令行和图形界面两个入口：
 
 - **`nmdl download`** —— 扫描目录里的音乐文件，按「歌手 - 歌名」去网易云匹配，把**歌词**
   存成同名 `.lrc`、**封面**存成同名 `.jpg`；
 - **`nmdl convert`** —— 把 **FLAC 转成 MP3**，喂给不认 FLAC 的播放设备。
+
+**手机上也能用**：`android/` 下是安卓版（Kotlin + Compose），做的是上面 `download` 那半边——
+扫描手机里的音乐、下载歌词封面。匹配打分、限流退避、缓存格式都和桌面版一致，
+所以同一个音乐文件夹在电脑和手机上轮流跑，进度是互通的、不会重复下载。
+
+> 📱 **[下载 APK](../../releases/latest)** · 用法和构建说明见 [android/README.md](android/README.md)
 
 匹配逻辑参考 [zhongyang219/MusicPlayer2](https://github.com/zhongyang219/MusicPlayer2)
 的歌词下载模块（`NeteaseLyricDownload.cpp` / `LyricDownloadCommon.cpp`），接口地址一致，
@@ -122,11 +128,18 @@ uv run nmdl download --rotate-ip --proxy http://127.0.0.1:7890
 
 ## 安卓版
 
-`android/` 下是同一套功能的安卓 app（Kotlin + Compose），只做「下载歌词封面」这一半。
-匹配打分、限流退避、`.nmdl_cache.json` 的格式都和桌面版一致——同一个音乐文件夹在
-电脑和手机上轮流跑，进度是互通的。
+APK 到 [Releases](../../releases/latest) 里下载，源码在 `android/`。
 
-构建和使用说明见 [android/README.md](android/README.md)。
+| | 桌面版 | 安卓版 |
+| --- | :---: | :---: |
+| 下载歌词 / 封面、合并翻译 | ✅ | ✅ |
+| 匹配打分、限流退避、缓存与报告 | ✅ | ✅ |
+| FLAC 转 MP3 | ✅ | ❌ |
+| 写入音频标签、Clash 换 IP | ✅ | ❌ |
+
+首次打开需要授予**「所有文件访问权限」**——歌词和封面要写在歌曲文件旁边，
+Android 11 以后只有这个权限能做到。用法、参数含义和构建方法见
+[android/README.md](android/README.md)。
 
 ## 代码结构
 
