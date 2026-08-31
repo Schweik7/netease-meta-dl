@@ -8,3 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Android
+android/.gradle/
+# local.properties 里是本机的 SDK 路径
+android/local.properties
+android/app/build/
+*.apk
+*.aab
+*.iml
+.idea/

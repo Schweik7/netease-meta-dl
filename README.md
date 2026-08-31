@@ -120,10 +120,18 @@ uv run nmdl download --rotate-ip --proxy http://127.0.0.1:7890
 - 纯音乐 → 报告里标 `纯音乐/无歌词`，属正常，重跑不会再去请求；
 - 匹配到了但明显不对 → 调高 `--min-score`（默认 45，满分约 138）。
 
+## 安卓版
+
+`android/` 下是同一套功能的安卓 app（Kotlin + Compose），只做「下载歌词封面」这一半。
+匹配打分、限流退避、`.nmdl_cache.json` 的格式都和桌面版一致——同一个音乐文件夹在
+电脑和手机上轮流跑，进度是互通的。
+
+构建和使用说明见 [android/README.md](android/README.md)。
+
 ## 代码结构
 
 ```
-src/nmdl/
+src/nmdl/                        桌面版（Python）
   net.py       全局限流、反限流退避、代理
   netease.py   搜索 / 歌词 / 封面接口封装
   matcher.py   文件名解析 + 匹配打分（MusicPlayer2 的权重）
@@ -133,6 +141,15 @@ src/nmdl/
   core.py      download 子命令：批量调度、缓存、报告
   cli.py       参数定义（CLI 与 GUI 共用同一个 parser）
   gui.py       Gooey 界面，直接渲染 cli.py 的 parser
+
+android/app/src/main/java/com/schweik/nmdl/    安卓版（Kotlin）
+  core/Http.kt        限流 + 退避 + 重试，对应 net.py
+  core/Netease.kt     接口封装，对应 netease.py
+  core/Matcher.kt     匹配打分，对应 matcher.py（含 difflib 相似度的等价实现）
+  core/Lrc.kt         歌词合并，对应 lrc.py
+  core/Scanner.kt     扫目录 + 读时长，对应 core.collect / tagging.duration_of
+  core/Downloader.kt  批量调度、缓存、报告，对应 core.py
+  ui/                 Compose 界面
 ```
 
 CLI 和 GUI 共用 `cli.build_parser()`，加参数两边同时就有了；两个子命令在 GUI 里就是
